@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+/app/build/
+/app/release/
+
+# Local configuration
+local.properties
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+.cxx/
+.externalNativeBuild/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Captures / profiling
+/captures/
+
+# Claude Code (project-local agent settings)
+.claude/
+
+# Keystore (if any)
+*.jks
+*.keystore
