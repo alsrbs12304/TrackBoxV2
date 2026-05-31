@@ -15,6 +15,7 @@ import com.mgpark.trackbox.domain.model.TrackingState
 import com.mgpark.trackbox.domain.repository.TrackingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import retrofit2.HttpException
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,6 +45,13 @@ class TrackingRepositoryImpl @Inject constructor(
             return Result.failure(IllegalStateException("이미 추가된 운송장입니다."))
         }
 
+        // 404 = 해당 운송장이 캐리어 시스템에 존재하지 않음. 등록 거부.
+        // 네트워크 오류/5xx/타임아웃은 추가 허용 (오프라인 등록 + 워커가 추후 갱신).
+        val remote = runCatching { service.fetchTracking(carrierId.raw, trimmed) }
+        if ((remote.exceptionOrNull() as? HttpException)?.code() == 404) {
+            return Result.failure(IllegalArgumentException("등록되지 않은 운송장 번호입니다."))
+        }
+
         val now = Instant.now()
         val seed = TrackingEntity(
             carrierRaw = carrierId.raw,
@@ -58,8 +66,6 @@ class TrackingRepositoryImpl @Inject constructor(
             isArchived = false,
         )
         val id = dao.insert(seed)
-
-        val remote = runCatching { service.fetchTracking(carrierId.raw, trimmed) }
         val merged = seed.copy(id = id).applyRemote(remote.getOrNull(), now)
         if (merged != seed.copy(id = id)) dao.update(merged)
 
